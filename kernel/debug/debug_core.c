@@ -164,6 +164,8 @@ int __weak kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
 {
 	int err;
 
+	printk("kgdb_arch_set_breakpoint\n");
+
 	err = probe_kernel_read(bpt->saved_instr, (char *)bpt->bpt_addr,
 				BREAK_INSTR_SIZE);
 	if (err)
@@ -175,6 +177,7 @@ int __weak kgdb_arch_set_breakpoint(struct kgdb_bkpt *bpt)
 
 int __weak kgdb_arch_remove_breakpoint(struct kgdb_bkpt *bpt)
 {
+	printk("kgdb_arch_remove_breakpoint\n");
 	return probe_kernel_write((char *)bpt->bpt_addr,
 				  (char *)bpt->saved_instr, BREAK_INSTR_SIZE);
 }
@@ -220,14 +223,18 @@ int __weak kgdb_skipexception(int exception, struct pt_regs *regs)
  */
 static void kgdb_flush_swbreak_addr(unsigned long addr)
 {
+	printk("kgdb_flush_swbreak_addr\n");
+
 	if (!CACHE_FLUSH_IS_SAFE)
 		return;
 
 	if (current->mm && current->mm->mmap_cache) {
+		printk("  ...flush_cache_range\n");
 		flush_cache_range(current->mm->mmap_cache,
 				  addr, addr + BREAK_INSTR_SIZE);
 	}
 	/* Force flush instruction cache if it was outside the mm */
+	printk("  ...flush_icache_range\n");
 	flush_icache_range(addr, addr + BREAK_INSTR_SIZE);
 }
 
@@ -239,6 +246,8 @@ int dbg_activate_sw_breakpoints(void)
 	int error;
 	int ret = 0;
 	int i;
+
+	printk("dbg_activate_sw_breakpoints\n");
 
 	for (i = 0; i < KGDB_MAX_BREAKPOINTS; i++) {
 		if (kgdb_break[i].state != BP_SET)

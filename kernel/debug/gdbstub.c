@@ -941,6 +941,8 @@ int gdb_serial_stub(struct kgdb_state *ks)
 	int error = 0;
 	int tmp;
 
+	printk("gdb_serial_stub\n");
+
 	/* Initialize comm buffer and globals. */
 	memset(remcom_out_buffer, 0, sizeof(remcom_out_buffer));
 	kgdb_usethread = kgdb_info[ks->cpu].task;
@@ -1077,6 +1079,8 @@ kgdb_exit:
 int gdbstub_state(struct kgdb_state *ks, char *cmd)
 {
 	int error;
+
+	printk("gdbstub_state\n");
 
 	switch (cmd[0]) {
 	case 'e':

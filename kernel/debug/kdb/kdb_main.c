@@ -1326,6 +1326,9 @@ int kdb_main_loop(kdb_reason_t reason, kdb_reason_t reason2, int error,
 	      kdb_dbtrap_t db_result, struct pt_regs *regs)
 {
 	int result = 1;
+
+	printk("kdb_main_loop\n");
+
 	/* Stay in kdb() until 'go', 'ss[b]' or an error */
 	while (1) {
 		/*

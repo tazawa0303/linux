@@ -95,42 +95,59 @@ static unsigned long get_step_address(const struct pt_regs *linux_regs)
 	/* By default, assume the instruction continues just after */
 	unsigned long addr = pc + 4;
 
+	printk("get_step_address\n");
+
 	/* B, BL */
 	if (OPCODE_B(op) || OPCODE_BL(op)) {
+		printk("  b/bl\n");
+
 		if (cond_is_true(cond, linux_regs)) {
+			printk("  cond true\n");
 			addr = pc + 8 + OPCODE_B_DISP(op);
 		}
 
 	/* BLX (imm) */
 	} else if (OPCODE_BLX_IMM(op)) {
+		printk("  blx imm\n");
 		addr = pc + 8 + OPCODE_B_DISP(op);
 
 	/* BX, BLX (reg) */
 	} else if (OPCODE_BX(op) || OPCODE_BLX_REG(op)) {
+		printk("  bx/blx reg\n");
+
 		if (cond_is_true(cond, linux_regs)) {
+			printk("  cond true\n");
 			addr = linux_regs->uregs[OPCODE_BX_BLX_RM(op)];
 		}
 
 	/* POP */
 	} else if (OPCODE_POP(op)) {
+		printk("  pop\n");
+
 		if (cond_is_true(cond, linux_regs)) {
 			u16 reg_list = OPCODE_REG_LIST(op);
+			printk("  cond true\n");
 
 			if (reg_list & REG_LIST_PC) {
 				unsigned n = num_bits_set(reg_list) - 1;
+				printk("  %u regs in list\n", n);
 				addr = get_word_on_stack(n, linux_regs);
 			}
 		}
 
 	/* POP pc */
 	} else if (OPCODE_POP_PC(op)) {
+		printk("  pop pc\n");
+
 		if (cond_is_true(cond, linux_regs)) {
+			printk("  cond true\n");
 			addr = get_word_on_stack(0, linux_regs);
 		}
 	}
 	/* TODO! Handle <op> R15, unpredictables, endianness, etc... */
 
 	addr = ALIGN4(addr);
+	printk("  step address: 0x%lx\n", addr);
 	return addr;
 }
 
@@ -148,6 +165,8 @@ static u32 poke_insn(u32 insn, unsigned long addr)
 	u32 replaced_insn = __raw_readl((void *)addr);
 	__raw_writel(insn, (void *)addr);
 
+	printk("poke_insn: wrote %x at @%lx, was %x\n", insn, addr, replaced_insn);
+
 	/* Flush dcache */
 	if (current->mm && current->mm->mmap_cache) {
 		flush_cache_range(current->mm->mmap_cache,
@@ -164,6 +183,8 @@ static void do_single_step(struct pt_regs *linux_regs)
 	/* Determine where the target instruction will send us to */
 	unsigned long addr = get_step_address(linux_regs);
 
+	printk("do_single_step\n");
+
 	stepped_address = addr;
 
 	/* Replace it */
@@ -175,6 +196,8 @@ static void do_single_step(struct pt_regs *linux_regs)
 /* Undo a single step */
 static void undo_single_step(struct pt_regs *linux_regs)
 {
+	printk("undo_single_step\n");
+
 	/* If we have stepped, put back the old instruction */
 	/* Use stepped_address in case we stopped elsewhere */
 	if (stepped_opcode != 0)
@@ -313,6 +336,8 @@ int kgdb_arch_handle_exception(int exception_vector, int signo,
 
 		/* single step */
 		if (remcom_in_buffer[0] == 's') {
+			printk("s!\n");
+
 			do_single_step(linux_regs);
 			kgdb_single_step = 1;
 
@@ -328,6 +353,7 @@ int kgdb_arch_handle_exception(int exception_vector, int signo,
 
 static int kgdb_brk_fn(struct pt_regs *regs, unsigned int instr)
 {
+	printk("kgdb_brk_fn\n");
 	kgdb_handle_exception(1, SIGTRAP, 0, regs);
 
 	return 0;
@@ -335,6 +361,7 @@ static int kgdb_brk_fn(struct pt_regs *regs, unsigned int instr)
 
 static int kgdb_compiled_brk_fn(struct pt_regs *regs, unsigned int instr)
 {
+	printk("kgdb_compiled_brk_fn\n");
 	compiled_break = 1;
 	kgdb_handle_exception(1, SIGTRAP, 0, regs);
 
@@ -378,6 +405,8 @@ kgdb_notify(struct notifier_block *self, unsigned long cmd, void *ptr)
 {
 	unsigned long flags;
 	int ret;
+
+	printk("kgdb_notify\n");
 
 	local_irq_save(flags);
 	ret = __kgdb_notify(ptr, cmd);

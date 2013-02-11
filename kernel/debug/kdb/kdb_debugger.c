@@ -43,6 +43,8 @@ int kdb_stub(struct kgdb_state *ks)
 	kdb_dbtrap_t db_result = KDB_DB_NOBPT;
 	int i;
 
+	printk("kdb_stub\n");
+
 	kdb_ks = ks;
 	if (KDB_STATE(REENTRY)) {
 		reason = KDB_REASON_SWITCH;
@@ -119,6 +121,7 @@ int kdb_stub(struct kgdb_state *ks)
 		/* Start kdb main loop */
 		error = kdb_main_loop(KDB_REASON_ENTER, reason,
 				      ks->err_code, db_result, ks->linux_regs);
+		printk("  ...kdb_main_loop returned\n");
 	}
 	/*
 	 * Upon exit from the kdb main loop setup break points and restart
@@ -137,14 +140,16 @@ int kdb_stub(struct kgdb_state *ks)
 	kdb_bp_install(ks->linux_regs);
 	dbg_activate_sw_breakpoints();
 	/* Set the exit state to a single step or a continue */
-	if (KDB_STATE(DOING_SS))
+	if (KDB_STATE(DOING_SS)) {
+		printk("  ...doing ss; calling gdbstub_state s\n");
 		gdbstub_state(ks, "s");
-	else
+	} else
 		gdbstub_state(ks, "c");
 
 	KDB_FLAG_CLEAR(CATASTROPHIC);
 
 	/* Invoke arch specific exception handling prior to system resume */
+	printk("  ...calling gdbstub_state e\n");
 	kgdb_info[ks->cpu].ret_state = gdbstub_state(ks, "e");
 	if (ks->pass_exception)
 		kgdb_info[ks->cpu].ret_state = 1;
